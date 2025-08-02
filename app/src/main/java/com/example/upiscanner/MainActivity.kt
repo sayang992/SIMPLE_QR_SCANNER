@@ -107,13 +107,13 @@ class MainActivity : AppCompatActivity() {
     override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
         menu?.clear()
         cameraList.forEach { id ->
-            menu?.add(id)
+            menu?.add("Camera ID $id")  // Label with visible text
         }
         return super.onPrepareOptionsMenu(menu)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        currentCameraId = item.title.toString()
+        currentCameraId = item.title.toString().removePrefix("Camera ID ")
         Toast.makeText(this, "Switched to camera ID: $currentCameraId", Toast.LENGTH_SHORT).show()
         startCamera()
         return true
