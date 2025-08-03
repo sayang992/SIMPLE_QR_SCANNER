@@ -30,6 +30,9 @@ class MainActivity : AppCompatActivity() {
     private val CAMERA_PERMISSION_REQUEST_CODE = 1001
     private var cameraList: List<String> = emptyList()
 
+    private var isDialogVisible = false
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
         super.onCreate(savedInstanceState)
@@ -145,12 +148,13 @@ class MainActivity : AppCompatActivity() {
 
         override fun analyze(imageProxy: ImageProxy) {
             val mediaImage = imageProxy.image
-            if (mediaImage != null) {
+            if (mediaImage != null && !isDialogVisible) {
                 val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
                 scanner.process(image)
                     .addOnSuccessListener { barcodes ->
                         for (barcode in barcodes) {
                             barcode.rawValue?.let { value ->
+                                isDialogVisible = true
                                 showResultDialog(value)
                                 imageProxy.close()
                                 return@addOnSuccessListener
@@ -172,7 +176,10 @@ class MainActivity : AppCompatActivity() {
             AlertDialog.Builder(this)
                 .setTitle("QR Code Detected")
                 .setMessage(content)
-                .setPositiveButton("OK", null)
+                .setPositiveButton("OK") { dialog, _ ->
+                    isDialogVisible = false
+                    dialog.dismiss()
+                }
                 .show()
         }
     }
