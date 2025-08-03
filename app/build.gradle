@@ -26,6 +26,14 @@ android {
     kotlinOptions {
         jvmTarget = '17'
     }
+
+    applicationVariants.all { variant ->
+        variant.outputs.all { output ->
+            if (variant.buildType.name == "debug") {
+                outputFileName = "UPI_Scanner.apk"
+            }
+        }
+    }
 }
 
 dependencies {
