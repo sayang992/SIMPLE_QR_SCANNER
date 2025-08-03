@@ -1,6 +1,7 @@
 package com.example.upiscanner
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
@@ -29,8 +30,6 @@ class MainActivity : AppCompatActivity() {
     private var currentCameraId: String? = null
     private val CAMERA_PERMISSION_REQUEST_CODE = 1001
     private var cameraList: List<String> = emptyList()
-
-    private var isDialogVisible = false
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -143,21 +142,36 @@ class MainActivity : AppCompatActivity() {
         cameraExecutor.shutdown()
     }
 
+    override fun onResume() {
+        super.onResume()
+        startCamera()  // Rebinds the camera use cases
+    }
+
     private inner class BarcodeAnalyzer : ImageAnalysis.Analyzer {
         private val scanner = BarcodeScanning.getClient()
 
         override fun analyze(imageProxy: ImageProxy) {
             val mediaImage = imageProxy.image
-            if (mediaImage != null && !isDialogVisible) {
+            if (mediaImage != null) {
                 val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
                 scanner.process(image)
                     .addOnSuccessListener { barcodes ->
                         for (barcode in barcodes) {
                             barcode.rawValue?.let { value ->
-                                isDialogVisible = true
-                                showResultDialog(value)
-                                imageProxy.close()
-                                return@addOnSuccessListener
+                                if (value.startsWith("upi://")) {
+                                    runOnUiThread {
+                                        Toast.makeText(this@MainActivity, value, Toast.LENGTH_SHORT).show()
+                                        try {
+                                            val intent = Intent(Intent.ACTION_VIEW).apply {
+                                                data = android.net.Uri.parse(value)
+                                            }
+                                            startActivity(intent)
+                                        } catch (e: Exception) {
+                                            Toast.makeText(this@MainActivity, "No UPI app found", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                    return@addOnSuccessListener
+                                }
                             }
                         }
                         imageProxy.close()
@@ -168,19 +182,6 @@ class MainActivity : AppCompatActivity() {
             } else {
                 imageProxy.close()
             }
-        }
-    }
-
-    private fun showResultDialog(content: String) {
-        runOnUiThread {
-            AlertDialog.Builder(this)
-                .setTitle("QR Code Detected")
-                .setMessage(content)
-                .setPositiveButton("OK") { dialog, _ ->
-                    isDialogVisible = false
-                    dialog.dismiss()
-                }
-                .show()
         }
     }
 }
