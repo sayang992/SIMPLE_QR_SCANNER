@@ -1,4 +1,4 @@
-package com.example.upiscanner
+package com.example.qrscanner
 
 import android.Manifest
 import android.content.Intent
@@ -8,7 +8,6 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.appcompat.widget.Toolbar
@@ -17,6 +16,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
 import java.util.concurrent.ExecutorService
@@ -31,6 +31,7 @@ class MainActivity : AppCompatActivity() {
     private val CAMERA_PERMISSION_REQUEST_CODE = 1001
     private var cameraList: List<String> = emptyList()
 
+    private var isDialogVisible = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
@@ -150,28 +151,45 @@ class MainActivity : AppCompatActivity() {
     private inner class BarcodeAnalyzer : ImageAnalysis.Analyzer {
         private val scanner = BarcodeScanning.getClient()
 
+        private fun handleScannedData(barcode: Barcode) {
+            val value = barcode.rawValue ?: return
+            // For all QR types, copy to clipboard and show toast once
+            val clipboard = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            val clip = android.content.ClipData.newPlainText("Scanned QR", value)
+            clipboard.setPrimaryClip(clip)
+
+            runOnUiThread {
+                Toast.makeText(this@MainActivity, value, Toast.LENGTH_SHORT).show()
+            }
+            // UPI QR handling for payment
+            if (value.startsWith("upi://")) {
+                try {
+                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                        data = android.net.Uri.parse(value)
+                    }
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    Toast.makeText(this@MainActivity, "No UPI app found", Toast.LENGTH_SHORT).show()
+                }
+            }
+            // Reset scanning after short delay
+            resetScanDelay()
+        }
+
+
+
         override fun analyze(imageProxy: ImageProxy) {
             val mediaImage = imageProxy.image
-            if (mediaImage != null) {
+            if (mediaImage != null && !isDialogVisible) {
                 val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
                 scanner.process(image)
                     .addOnSuccessListener { barcodes ->
                         for (barcode in barcodes) {
-                            barcode.rawValue?.let { value ->
-                                if (value.startsWith("upi://")) {
-                                    runOnUiThread {
-                                        Toast.makeText(this@MainActivity, value, Toast.LENGTH_SHORT).show()
-                                        try {
-                                            val intent = Intent(Intent.ACTION_VIEW).apply {
-                                                data = android.net.Uri.parse(value)
-                                            }
-                                            startActivity(intent)
-                                        } catch (e: Exception) {
-                                            Toast.makeText(this@MainActivity, "No UPI app found", Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
-                                    return@addOnSuccessListener
-                                }
+                            barcode.rawValue?.let {
+                                isDialogVisible = true
+                                handleScannedData(barcode)
+                                imageProxy.close()
+                                return@addOnSuccessListener
                             }
                         }
                         imageProxy.close()
@@ -183,6 +201,15 @@ class MainActivity : AppCompatActivity() {
                 imageProxy.close()
             }
         }
+
+        private fun resetScanDelay() {
+            previewView.postDelayed({
+                isDialogVisible = false
+            }, 1500) // Scan again after 1.5 seconds
+        }
+
+
+
     }
 }
 

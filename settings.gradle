@@ -18,5 +18,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "UPI_Scanner"
+rootProject.name = "QR_Scanner"
 include(":app")

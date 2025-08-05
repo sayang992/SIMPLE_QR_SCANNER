@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace 'com.example.upiscanner'
+    namespace 'com.example.qrscanner'
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.example.upiscanner"
+        applicationId "com.example.qrscanner"
         minSdk 21
         targetSdk 34
         versionCode 1
@@ -30,7 +30,7 @@ android {
     applicationVariants.all { variant ->
         variant.outputs.all { output ->
             if (variant.buildType.name == "debug") {
-                outputFileName = "UPI_Scanner.apk"
+                outputFileName = "QR_Scanner.apk"
             }
         }
     }
