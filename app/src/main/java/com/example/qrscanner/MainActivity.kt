@@ -1,4 +1,4 @@
-package com.example.qrscanner
+package com.theuniviteddeveloper.qrscanner
 
 import android.Manifest
 import android.content.Intent
